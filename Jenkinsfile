@@ -23,6 +23,12 @@ def run_tests(cmake_ver) {
   }
 }
 
+def os_label = [
+    linux: 'linux && x86_64',
+    macos: 'macos && arm64',
+    windows: 'windows && x86_64',
+]
+
 getApproval()
 
 pipeline {
@@ -74,7 +80,7 @@ pipeline {
         stages {
           stage("Test") {
             agent {
-              label "${PLATFORM} && x86_64"
+              label "${os_label[env.PLATFORM]}"
             }
             steps {
               println "Stage running on ${env.NODE_NAME}"
