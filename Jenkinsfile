@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.27.0') _
+@Library('xmos_jenkins_shared_library@v0.35.0') _
 
 def run_tests(cmake_ver, generator) {
   createVenv('python_version.txt')
@@ -23,6 +23,12 @@ def run_tests(cmake_ver, generator) {
   }
 }
 
+def os_label = [
+    linux: 'linux && x86_64',
+    macos: 'macos && arm64',
+    windows: 'windows && x86_64',
+]
+
 getApproval()
 
 pipeline {
@@ -34,12 +40,12 @@ pipeline {
   parameters {
     string(
       name: 'TOOLS_VERSION',
-      defaultValue: '15.2.1',
+      defaultValue: '15.3.0',
       description: 'The XTC Tools version'
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v5.5.2',
+      defaultValue: 'v6.2.0',
       description: 'The xmosdoc version'
     )
   }
@@ -47,16 +53,16 @@ pipeline {
   stages {
     stage('Documentation') {
       agent {
-        label 'docker'
+        label 'linux && x86_64'
       }
       steps {
         println "Stage running on ${env.NODE_NAME}"
-        sh "docker pull ghcr.io/xmos/xmosdoc:${params.XMOSDOC_VERSION}"
-        sh """docker run -u "\$(id -u):\$(id -g)" \
-              --rm \
-              -v ${WORKSPACE}:/build \
-              ghcr.io/xmos/xmosdoc:${params.XMOSDOC_VERSION} -v"""
-        archiveArtifacts artifacts: 'doc/_build/**', allowEmptyArchive: false
+        buildDocs()
+      }
+      post {
+        cleanup {
+          xcoreCleanSandbox()
+        }
       }
     }
     stage('Test') {
@@ -78,7 +84,7 @@ pipeline {
         stages {
           stage("Test") {
             agent {
-              label "${PLATFORM} && x86_64"
+              label "${os_label[env.PLATFORM]}"
             }
             steps {
               println "Stage running on ${env.NODE_NAME}"
